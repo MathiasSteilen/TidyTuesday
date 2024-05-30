@@ -1,0 +1,54 @@
+---
+title: "Tidy Tuesday"
+author: "Mathias Steilen"
+date: "04/06/2024"
+format: 
+  html:
+    other-links:
+      - text: TidyTuesday Repo (Data Source)
+        href: https://github.com/rfordatascience/tidytuesday/tree/master
+    toc: true
+    toc-expand: 2
+    toc-title: "Table of Contents"
+    number-sections: true
+    code-fold: true
+    code-tools:
+      source: true
+      toggle: true
+      caption: "Code Options"
+    code-block-bg: true
+    code-block-border-left: "#191970"
+    highlight-style: monochrome
+    echo: true
+    warning: false
+    embed-resources: true
+---
+
+# Load packages {.unnumbered}
+
+```{python}
+import pandas as pd
+import numpy as np
+import plotnine as pn
+```
+
+# The Data
+
+# The Chart(s)
+
+## First Chart
+
+```{python}
+# | echo: True
+# | warning: false
+# | cache: true
+# | label: chart1
+# | fig-cap: "This week's plot innit"
+
+(
+    pn.ggplot(data=pd.DataFrame({"x": np.random.normal(size=10)}), mapping=pn.aes("x"))
+    + pn.geom_histogram()
+    + pn.labs(title="Hello", x="Test", y="Test2")
+)
+
+```
