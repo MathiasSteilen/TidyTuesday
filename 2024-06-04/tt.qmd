@@ -95,8 +95,6 @@ pn.theme_set(
 
 # The Data
 
-## Raw Data
-
 This week's data comes from [Zurich Open Data](https://www.stadt-zuerich.ch/opendata.secure.html) and includes files on birth rates as well as `geojson` files to plot the statistical areas within the city. Let's start by loading these:
 
 ```{python}
@@ -244,10 +242,11 @@ fig = px.choropleth(
     color="geburtenrate_promille",
     projection="mercator",
     color_continuous_scale=px.colors.sequential.OrRd,
+    height=500
 )
 fig.update_layout(
     margin={"r": 0, "t": 50, "l": 0, "b": 0},
-    title="Choropleth Map of Birth Rate",
+    title="Birth rates over the past decade in the city of Zurich",
 )
 fig.update_geos(fitbounds="locations", visible=False)
 
