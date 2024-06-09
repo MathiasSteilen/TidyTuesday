@@ -14,14 +14,12 @@ This repository is dedicated to creating a new chart in Python or R each week ba
 
 ***
 
-## 2024-06-04: TOPIC TBD
+## 2024-06-04: Birth Rates in the City of Zurich
 
 View the creation process [here](https://html-preview.github.io/?url=https://github.com/MathiasSteilen/TidyTuesday/blob/main/2024-06-04/tt.html).
 
-![./2024-06-04/.png](./2024-06-04/2024-06-04.png)
-
 <p align="center">
-  <img src="" width="600" />
+  <img src="./2024-06-04/chart.png" width="600" />
 </p>
 
 ***
