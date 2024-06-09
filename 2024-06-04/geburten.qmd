@@ -1,0 +1,264 @@
+---
+title: "Birth Rates in City of Zurich"
+author: "Mathias Steilen"
+date: "09/06/2024"
+format: 
+  html:
+    # other-links:
+    #   - text: TidyTuesday Repo (Data Source)
+    #     href: https://github.com/rfordatascience/tidytuesday/tree/master
+    toc: true
+    toc-expand: 2
+    toc-title: "Table of Contents"
+    number-sections: false
+    code-fold: true
+    code-tools:
+      source: true
+      toggle: true
+      caption: "Code Options"
+    code-block-bg: true
+    code-block-border-left: "#191970"
+    highlight-style: monochrome
+    echo: true
+    warning: false
+    embed-resources: true
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+# Topic
+
+Because this week's TidyTuesday dataset was a little bit of a niche subject (cheeses) and had mostly missing values, I switched to my own data set for this week, namely: Birth rates in the canton of Zurich. I have recently seen a chart with increasing birth rates in the city, which was quite surprising given the news you can read everywhere about declining birth rates in developped countries. Let's dive into the data and see what we can find out.
+
+# Setup {.unnumbered}
+
+Load packages:
+
+```{python}
+# | output: false
+
+# Load packages
+import pandas as pd
+import pandas as pd
+import geopandas as gpd
+import polars as pl
+import plotnine as pn
+import numpy as np
+from tqdm.notebook import tqdm
+from skimpy import clean_columns
+import os
+
+import plotly.express as px
+import plotly.graph_objects as go
+
+# Allow to show more columns than default
+pd.set_option("display.max.columns", 500)
+pl.Config.set_tbl_cols(500)
+```
+
+I am dealing with geo data, therefore I'm loading `geopandas` for this week.
+
+```{python}
+# | include: false
+
+# Colour theme
+jama_colour = [
+    "#374e55",
+    "#df8f44",
+    "#00a1d5",
+    "#b24745",
+    "#79af97",
+]
+
+background_colour = "#F2F2F2"
+
+pn.theme_set(
+    pn.theme_classic()
+    + pn.theme(
+        figure_size=[7, 7 / 1.618],
+        text=pn.element_text(family="monospace"),
+        plot_background=pn.element_rect(
+            fill=background_colour, colour=background_colour
+        ),
+        panel_background=pn.element_rect(
+            fill=background_colour, colour=background_colour
+        ),
+        legend_background=pn.element_rect(
+            fill=background_colour, colour=background_colour
+        ),
+    )
+)
+```
+
+# The Data
+
+## Raw Data
+
+This week's data comes from [Zurich Open Data](https://www.stadt-zuerich.ch/opendata.secure.html) and includes files on birth rates as well as `geojson` files to plot the statistical areas within the city. Let's start by loading these:
+
+```{python}
+zones = gpd.read_file("./geodata/stzh.adm_statzonen_map.json")
+zones.head(3)
+```
+
+As you can see in the table above, we have "statistical zone" names and ids, as well as the names of the corresponding neighbourhoods.
+
+<br>
+
+***
+
+# Birth Rates over Time
+
+```{python}
+data = pd.read_csv("./data/geburtenrate_nach_zeit.csv").pipe(clean_columns)
+data.head()
+```
+
+```{python}
+# | fig-align: center
+# | out-width: "100%"
+# | label: birth-rate
+
+fig = px.line(
+    data_frame=data,
+    x="stichtag_dat_jahr",
+    y="geb_rate",
+    markers="true",
+    height=400,
+    template="plotly_white",
+)
+fig.update_layout(
+    margin={"r": 20, "t": 20, "l": 20, "b": 20},
+    # title="Birth Rate",
+    xaxis_title="Year",
+    yaxis_title="Birth Rate",
+)
+fig.update_yaxes(range=[0, data.geb_rate.max() + 1])
+
+fig.show()
+```
+
+Reason for increase in birth rate during WWII? Likely that more women moved into the city?
+
+General upward trend since the beginning of the 80s. Significant recent drop after pandemic.
+
+<br>
+
+***
+
+# Average Birthing Age
+
+```{python}
+data = pd.read_csv("./data/alter_nach_herkunft.csv").pipe(clean_columns)
+data.head()
+```
+
+```{python}
+# | label: averageage
+# | fig-align: center
+# | out-width: "100%"
+
+fig = px.line(
+    data_frame=data.query("herkunft == 'Total'"),
+    x="stichtag_dat_jahr",
+    y="durch_alter",
+    markers="true",
+    height=400,
+    template="plotly_white",
+)
+fig.update_layout(
+    margin={"r": 20, "t": 50, "l": 20, "b": 20},
+    xaxis_title="Year",
+    yaxis_title="Age at birth",
+)
+# fig.update_yaxes(range=[0, data.durch_alter.max()])
+
+fig.show()
+```
+
+As can be seen above, the average has been steadily increasing at an almost linear rate over the past 3 decades. At some point, this is going to level off due to natural limits to fertility.
+
+# Birth Rates By Location In The Last Decade
+
+```{python}
+data = pd.read_csv("./data/geburtenrate_nach_zone.csv").pipe(clean_columns)
+data.head()
+```
+
+This data gives us information on the birth rates in the statistical zones. I'll average the numbers over the last decade together to take a some variation out. Also, I'll limit the plot to the zones with at least 100 people:
+
+```{python}
+start_year = 2014
+end_year = 2023
+
+data = (
+    data.query("@start_year <= stichtag_dat_jahr <= @end_year")
+    .groupby("stat_zone_sort")
+    .agg(
+        geburtenrate_promille=("geburtenrate_promille", "mean"),
+        anz_best_wir=("anz_best_wir", "mean"),
+    )
+    .reset_index()
+    .assign(
+        deviation=lambda x: np.round(
+            x.geburtenrate_promille - x.geburtenrate_promille.mean(), 2
+        ),
+        geburtenrate_promille=lambda x: np.round(x.geburtenrate_promille, 2),
+    )
+    .query("anz_best_wir > 100")
+)
+```
+
+Having computed these numbers, let's merge them with the zone data:
+
+```{python}
+plot_data = zones.merge(
+    (
+        data
+        .rename(columns={"stat_zone_sort": "stznr"})
+    ),
+    how="left",
+    on="stznr",
+).set_index("stznr")
+```
+
+Now I can plot the choropleth map showing the average birth rates over the past decade for the different statistical zones:
+
+```{python}
+# | out-width: "100%"
+# | label: chart1
+
+fig = px.choropleth(
+    plot_data,
+    geojson=plot_data.geometry,
+    locations=plot_data.index,
+    hover_name=plot_data.stzname,
+    hover_data=["deviation"],
+    labels={
+        "deviation": "Deviation from Mean",
+        "geburtenrate_promille": "Birth Rate (‰)",
+    },
+    color="geburtenrate_promille",
+    projection="mercator",
+    color_continuous_scale=px.colors.sequential.OrRd,
+)
+fig.update_layout(
+    margin={"r": 0, "t": 50, "l": 0, "b": 0},
+    title="Choropleth Map of Birth Rate",
+)
+fig.update_geos(fitbounds="locations", visible=False)
+
+fig.show()
+```
+
+# Individual Births
+
+```{python}
+data = pd.read_csv("./data/einzelne_geburten.csv").pipe(clean_columns)
+data.head()
+```
+
+This data provides information on birth-level, that is we have one line item per recorded birth. 
